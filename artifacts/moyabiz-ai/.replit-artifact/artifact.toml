@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "MoyaBiz AI"
+description = "A mobile-friendly business toolkit for South African small business owners to calculate profit, prepare customer quotations, and create WhatsApp and Facebook marketing content."
+version = "1.0.0"
+id = "artifacts/moyabiz-ai"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23840
+
+[services.development]
+run = "pnpm --filter @workspace/moyabiz-ai run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/moyabiz-ai", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/moyabiz-ai/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23840"
+BASE_PATH = "/"

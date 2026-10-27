@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: marketing
+    description: Server-side marketing content generation
 paths:
   /healthz:
     get:
@@ -24,6 +26,48 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /marketing/status:
+    get:
+      operationId: getMarketingStatus
+      tags: [marketing]
+      summary: Check whether live marketing generation is configured
+      responses:
+        "200":
+          description: Marketing generation configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketingStatus"
+  /marketing/generate:
+    post:
+      operationId: generateMarketing
+      tags: [marketing]
+      summary: Generate marketing captions for WhatsApp and Facebook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarketingInput"
+      responses:
+        "200":
+          description: Generated captions or clearly labeled demonstration captions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketingOutput"
+        "400":
+          description: Invalid marketing request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: The configured model provider failed to generate captions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +77,66 @@ components:
           type: string
       required:
         - status
+    MarketingStatus:
+      type: object
+      properties:
+        configured:
+          type: boolean
+        model:
+          type: ["string", "null"]
+      required:
+        - configured
+        - model
+    MarketingInput:
+      type: object
+      properties:
+        businessType:
+          type: string
+          minLength: 1
+          maxLength: 120
+        productOrService:
+          type: string
+          minLength: 1
+          maxLength: 240
+        targetCustomers:
+          type: string
+          minLength: 1
+          maxLength: 240
+        platform:
+          type: string
+          enum: [WhatsApp, Facebook, Both]
+        tone:
+          type: string
+          minLength: 1
+          maxLength: 80
+      required:
+        - businessType
+        - productOrService
+        - targetCustomers
+        - platform
+        - tone
+    MarketingOutput:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum: [demo, ai]
+        whatsappCaption:
+          type: string
+        facebookCaption:
+          type: string
+        model:
+          type: ["string", "null"]
+      required:
+        - mode
+        - whatsappCaption
+        - facebookCaption
+        - model
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
 
