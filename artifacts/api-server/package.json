@@ -7,6 +7,7 @@
     "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
+    "test:marketing": "pnpm exec esbuild test/marketing.test.mjs --bundle --platform=node --format=esm --target=node24 --external:express --outfile=dist/marketing.test.mjs && node --test dist/marketing.test.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

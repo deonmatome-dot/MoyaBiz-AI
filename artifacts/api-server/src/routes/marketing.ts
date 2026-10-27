@@ -103,20 +103,41 @@ router.post("/marketing/generate", async (req, res): Promise<void> => {
   const parsed = GenerateMarketingBody.safeParse(req.body);
   if (!parsed.success) {
     req.log.warn({ errors: parsed.error.issues.length }, "Invalid marketing request");
+    const labels: Record<string, string> = {
+      businessType: "Business type",
+      productOrService: "Product or service",
+      targetCustomers: "Target customers",
+      platform: "Platform",
+      tone: "Tone",
+    };
+    const messages = parsed.error.issues.map((issue) => {
+      const field = typeof issue.path[0] === "string" ? issue.path[0] : "";
+      const label = labels[field] ?? "Request";
+      if (field === "platform") {
+        return "Platform must be WhatsApp, Facebook, or Both";
+      }
+      if (issue.code === "too_small") return `${label} is required`;
+      if (issue.code === "too_big") return `${label} is too long`;
+      return `${label} is invalid`;
+    });
     res.status(400).json({
-      error: "Complete each field and check the character limits before trying again.",
+      error: `${messages.join(". ")}.`,
     });
     return;
   }
 
-  if (
-    !parsed.data.businessType.trim() ||
-    !parsed.data.productOrService.trim() ||
-    !parsed.data.targetCustomers.trim() ||
-    !parsed.data.tone.trim()
-  ) {
+  const requiredFields = [
+    ["businessType", parsed.data.businessType, "business type"],
+    ["productOrService", parsed.data.productOrService, "product or service"],
+    ["targetCustomers", parsed.data.targetCustomers, "target customers"],
+    ["tone", parsed.data.tone, "tone"],
+  ] as const;
+  const blankFields = requiredFields
+    .filter(([, value]) => !value.trim())
+    .map(([, , label]) => label);
+  if (blankFields.length > 0) {
     res.status(400).json({
-      error: "Business type, offer, target customers, and tone cannot be blank.",
+      error: `Complete these fields before generating captions: ${blankFields.join(", ")}.`,
     });
     return;
   }
