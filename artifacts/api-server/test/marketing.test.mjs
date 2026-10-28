@@ -28,6 +28,7 @@ test("marketing endpoint handles demo, validation, and Meta API responses", asyn
   assert.ok(address && typeof address === "object");
 
   const originalKey = process.env.MODEL_API_KEY;
+  const originalEnabled = process.env.META_MODEL_API_ENABLED;
   const originalFetch = globalThis.fetch;
 
   async function request(method, path, body) {
@@ -64,11 +65,20 @@ test("marketing endpoint handles demo, validation, and Meta API responses", asyn
     globalThis.fetch = originalFetch;
     if (originalKey === undefined) delete process.env.MODEL_API_KEY;
     else process.env.MODEL_API_KEY = originalKey;
+    if (originalEnabled === undefined) delete process.env.META_MODEL_API_ENABLED;
+    else process.env.META_MODEL_API_ENABLED = originalEnabled;
     await new Promise((resolve) => server.close(resolve));
   });
 
-  await t.test("reports missing key and produces clearly labeled demo captions", async () => {
-    delete process.env.MODEL_API_KEY;
+  await t.test("keeps demo mode when live calls are disabled, even if a key exists", async () => {
+    process.env.MODEL_API_KEY = "mock";
+    delete process.env.META_MODEL_API_ENABLED;
+    let upstreamCalls = 0;
+    globalThis.fetch = async () => {
+      upstreamCalls += 1;
+      throw new Error("Disabled live mode must not call Meta");
+    };
+
     const status = await request("GET", "/marketing/status");
     assert.deepEqual(status.body, { configured: false, model: null });
 
@@ -81,6 +91,29 @@ test("marketing endpoint handles demo, validation, and Meta API responses", asyn
     assert.equal(response.body.mode, "demo");
     assert.match(response.body.whatsappCaption, /fresh vetkoek/);
     assert.match(response.body.facebookCaption, /families in Soweto/);
+    assert.equal(upstreamCalls, 0);
+  });
+
+  await t.test("keeps demo mode if live generation is enabled but no key exists", async () => {
+    delete process.env.MODEL_API_KEY;
+    process.env.META_MODEL_API_ENABLED = "true";
+    let upstreamCalls = 0;
+    globalThis.fetch = async () => {
+      upstreamCalls += 1;
+      throw new Error("Missing-key live mode must not call Meta");
+    };
+
+    const status = await request("GET", "/marketing/status");
+    assert.deepEqual(status.body, { configured: false, model: null });
+
+    const response = await request(
+      "POST",
+      "/marketing/generate",
+      validInput,
+    );
+    assert.equal(response.status, 200);
+    assert.equal(response.body.mode, "demo");
+    assert.equal(upstreamCalls, 0);
   });
 
   await t.test("returns field-specific errors for invalid requests", async () => {
@@ -95,7 +128,8 @@ test("marketing endpoint handles demo, validation, and Meta API responses", asyn
   });
 
   await t.test("sends a server-side Responses API request and validates its result", async () => {
-    process.env.MODEL_API_KEY = "server-only-test-key";
+    process.env.MODEL_API_KEY = "mock";
+    process.env.META_MODEL_API_ENABLED = "true";
     let receivedRequest;
     globalThis.fetch = async (url, options) => {
       receivedRequest = { url: String(url), options };
@@ -127,17 +161,18 @@ test("marketing endpoint handles demo, validation, and Meta API responses", asyn
     assert.equal(receivedRequest.options.method, "POST");
     assert.equal(
       receivedRequest.options.headers.Authorization,
-      "Bearer server-only-test-key",
+      "Bearer mock",
     );
     const apiBody = JSON.parse(receivedRequest.options.body);
     assert.equal(apiBody.model, "muse-spark-1.3");
     assert.match(apiBody.input, /fresh vetkoek/);
     assert.match(apiBody.input, /Friendly and helpful/);
-    assert.doesNotMatch(JSON.stringify(response.body), /server-only-test-key/);
+    assert.doesNotMatch(JSON.stringify(response.body), /Bearer mock/);
   });
 
   await t.test("returns a useful upstream failure without exposing the key", async () => {
-    process.env.MODEL_API_KEY = "server-only-test-key";
+    process.env.MODEL_API_KEY = "mock";
+    process.env.META_MODEL_API_ENABLED = "true";
     globalThis.fetch = async () => ({
       ok: false,
       status: 401,
@@ -151,11 +186,12 @@ test("marketing endpoint handles demo, validation, and Meta API responses", asyn
     assert.equal(response.status, 502);
     assert.match(response.body.error, /HTTP 401/);
     assert.match(response.body.error, /API key/);
-    assert.doesNotMatch(response.body.error, /server-only-test-key/);
+    assert.doesNotMatch(response.body.error, /mock/);
   });
 
   await t.test("explains connection failures", async () => {
-    process.env.MODEL_API_KEY = "server-only-test-key";
+    process.env.MODEL_API_KEY = "mock";
+    process.env.META_MODEL_API_ENABLED = "true";
     globalThis.fetch = async () => {
       throw new TypeError("offline");
     };

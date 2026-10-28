@@ -17,6 +17,19 @@ out-tsc
 # dependencies
 node_modules
 
+# local environment and credentials (never commit secrets)
+.env
+.env.*
+!.env.example
+!.env.sample
+.secrets/
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+service-account*.json
+
 # IDEs and editors
 /.idea
 .project

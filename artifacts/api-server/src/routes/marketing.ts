@@ -27,6 +27,14 @@ function makeDemoCaptions(input: {
   };
 }
 
+function getEnabledModelApiKey(): string | null {
+  const liveGenerationEnabled =
+    process.env.META_MODEL_API_ENABLED?.trim().toLowerCase() === "true";
+  const apiKey = process.env.MODEL_API_KEY?.trim();
+
+  return liveGenerationEnabled && apiKey ? apiKey : null;
+}
+
 function findOutputText(payload: unknown): string | null {
   if (typeof payload !== "object" || payload === null) return null;
 
@@ -91,7 +99,7 @@ function parseCaptionPair(text: string): CaptionPair | null {
 }
 
 router.get("/marketing/status", (_req, res): void => {
-  const configured = Boolean(process.env.MODEL_API_KEY?.trim());
+  const configured = Boolean(getEnabledModelApiKey());
   const status = GetMarketingStatusResponse.parse({
     configured,
     model: configured ? DEFAULT_MODEL : null,
@@ -144,7 +152,7 @@ router.post("/marketing/generate", async (req, res): Promise<void> => {
 
   const { businessType, productOrService, targetCustomers, platform, tone } =
     parsed.data;
-  const apiKey = process.env.MODEL_API_KEY?.trim();
+  const apiKey = getEnabledModelApiKey();
 
   if (!apiKey) {
     const captions = makeDemoCaptions(parsed.data);

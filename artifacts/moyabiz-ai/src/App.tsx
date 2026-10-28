@@ -385,7 +385,7 @@ function Marketing() {
           </div>
           {status.isLoading ? <div className="h-10 animate-pulse rounded-lg bg-[#edf1f3]" data-testid="status-marketing-loading" /> :
             status.isError ? <div className="rounded-lg border border-[#f0d9c7] bg-[#fff8f1] p-3 text-xs leading-5 text-[#8a6039]" data-testid="status-marketing-error">We could not check live generation right now. You can still try generating a caption.</div> :
-            <div className="flex items-start gap-2 rounded-lg bg-[#f2f7f3] p-3 text-xs leading-5 text-[#54715f]" data-testid="status-marketing-mode"><span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-[#43a76c]" />{status.data?.configured ? `A server-side API key is configured${status.data.model ? ` for ${status.data.model}` : ''}. Live access is confirmed only after a successful request.` : 'Demo mode is active. Captions are sample suggestions, not AI-generated.'}</div>}
+            <div className="flex items-start gap-2 rounded-lg bg-[#f2f7f3] p-3 text-xs leading-5 text-[#54715f]" data-testid="status-marketing-mode"><span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-[#43a76c]" />{status.data?.configured ? `Live mode is enabled for ${status.data.model ?? 'Muse Spark'}; access is confirmed only after a successful response.` : 'Demo mode is active. Captions are sample suggestions, not AI-generated.'}</div>}
           {status.data?.configured && <>
             <p className="rounded-lg border border-[#f0e4c9] bg-[#fffaf0] p-3 text-xs leading-5 text-[#796542]" data-testid="notice-model-usage-cost">Live requests use your Meta Model API account and may incur usage charges. Demo mode does not send requests to Meta.</p>
             <label className="flex cursor-pointer items-start gap-2 text-xs leading-5 text-[#536474]" data-testid="label-model-cost-consent">
@@ -403,26 +403,27 @@ function Marketing() {
             {output.mode === 'ai' ? <Check size={15} /> : <CircleHelp size={15} />}
             {output.mode === 'ai' ? `AI-generated${output.model ? ` · ${output.model}` : ''}` : 'Demo suggestion · not AI-generated'}
           </div>
-          {(platform === 'Both' || platform === 'WhatsApp') && <CaptionCard title="WhatsApp" subtitle="Short and personal" text={output.whatsappCaption} copied={copied === 'WhatsApp'} onCopy={() => copyCaption(output.whatsappCaption, 'WhatsApp')} test="whatsapp" />}
-          {(platform === 'Both' || platform === 'Facebook') && <CaptionCard title="Facebook" subtitle="A little more room to tell your story" text={output.facebookCaption} copied={copied === 'Facebook'} onCopy={() => copyCaption(output.facebookCaption, 'Facebook')} test="facebook" />}
+          {(platform === 'Both' || platform === 'WhatsApp') && <CaptionCard title="WhatsApp" subtitle="Short and personal" text={output.whatsappCaption} mode={output.mode} model={output.model} copied={copied === 'WhatsApp'} onCopy={() => copyCaption(output.whatsappCaption, 'WhatsApp')} test="whatsapp" />}
+          {(platform === 'Both' || platform === 'Facebook') && <CaptionCard title="Facebook" subtitle="A little more room to tell your story" text={output.facebookCaption} mode={output.mode} model={output.model} copied={copied === 'Facebook'} onCopy={() => copyCaption(output.facebookCaption, 'Facebook')} test="facebook" />}
         </> : <div className="soft-card flex min-h-[300px] flex-col items-center justify-center px-7 py-10 text-center" data-testid="content-caption-empty">
           <div className="relative mb-5 flex h-[74px] w-[74px] items-center justify-center rounded-[25px] bg-[#eaf5ed] text-[#27834f]"><Megaphone size={31} /><span className="absolute -right-1 -top-1 h-5 w-5 rounded-full border-4 border-white bg-[#73cb8d]" /></div>
           <p className="text-[10px] font-extrabold uppercase tracking-[.17em] text-[#438457]">Your next post starts here</p>
           <h3 className="display-font mt-2 text-xl font-extrabold text-[#21384e]">A good caption, made simple.</h3>
           <p className="mt-2 max-w-sm text-sm leading-6 text-[#7c8a95]">Fill in your business details and we’ll prepare a caption you can review and copy.</p>
-          <div className="mt-5 flex items-center gap-2 text-xs font-semibold text-[#89969f]"><span className="h-1.5 w-1.5 rounded-full bg-[#71bc85]" />{status.isLoading ? 'Checking availability' : status.data?.configured ? 'Live generation available' : 'Demo mode available'}</div>
+          <div className="mt-5 flex items-center gap-2 text-xs font-semibold text-[#89969f]"><span className="h-1.5 w-1.5 rounded-full bg-[#71bc85]" />{status.isLoading ? 'Checking availability' : status.data?.configured ? 'Live mode enabled · response not yet confirmed' : 'Demo mode available'}</div>
         </div>}
       </section>
     </div>
   </div>;
 }
 
-function CaptionCard({ title, subtitle, text, copied, onCopy, test }: { title: string; subtitle: string; text: string; copied: boolean; onCopy: () => void; test: string }) {
+function CaptionCard({ title, subtitle, text, mode, model, copied, onCopy, test }: { title: string; subtitle: string; text: string; mode: MarketingOutput['mode']; model: string | null; copied: boolean; onCopy: () => void; test: string }) {
   return <article className="soft-card overflow-hidden" data-testid={`card-caption-${test}`}>
     <div className="flex items-center justify-between border-b border-[#e9eef0] px-5 py-4">
       <div><h3 className="display-font font-extrabold text-[#20374d]">{title}</h3><p className="mt-0.5 text-xs text-[#84919b]">{subtitle}</p></div>
       <button className="btn-secondary inline-flex items-center gap-1.5 !px-3 !py-2 text-xs" onClick={onCopy} data-testid={`button-copy-${test}`}><Copy size={14} />{copied ? 'Copied' : 'Copy'}</button>
     </div>
+    <p className={`px-5 pt-4 text-xs font-semibold ${mode === 'ai' ? 'text-[#34724b]' : 'text-[#78653a]'}`} data-testid={`status-caption-mode-${test}`}>{mode === 'ai' ? `AI-generated · ${model ?? 'Muse Spark'}` : 'Demo suggestion · not AI-generated'}</p>
     <p className="whitespace-pre-wrap px-5 py-5 text-[14px] leading-7 text-[#42586a]" data-testid={`text-caption-${test}`}>{text}</p>
     {copied && <div className="border-t border-[#e9eef0] px-5 py-2 text-xs font-semibold text-[#27834f]" data-testid={`status-copied-${test}`}>Caption copied to clipboard</div>}
   </article>;

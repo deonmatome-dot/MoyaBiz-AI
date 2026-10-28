@@ -1,30 +1,48 @@
 # MoyaBiz AI
 
-MoyaBiz AI is a mobile-friendly toolkit for South African small businesses. It includes a ZAR profit calculator, a quotation builder with print/PDF support, and a WhatsApp/Facebook marketing caption assistant.
+MoyaBiz AI is a mobile-friendly toolkit for South African small-business owners. It helps users estimate profit, prepare customer quotations, and draft WhatsApp and Facebook marketing captions in South African Rand (ZAR).
 
-## Run in Replit
+## Features
 
-1. Open the project in Replit and install workspace dependencies with `pnpm install`.
-2. Start the **API Server** and **MoyaBiz AI: web** workflows. Their commands are `pnpm --filter @workspace/api-server run dev` and `pnpm --filter @workspace/moyabiz-ai run dev`.
-3. Open the MoyaBiz AI web preview. The API Server workflow provides the `/api` endpoints used by the marketing assistant.
+- **Profit Calculator:** calculates revenue, total cost, gross profit, and profit margin from validated cost, price, and quantity inputs.
+- **Quotation Builder:** creates a printable quotation with multiple item lines, automatic totals, and print/save-as-PDF support.
+- **Marketing Assistant:** produces sample WhatsApp and Facebook captions from business details. Every sample is labeled **“Demo suggestion · not AI-generated.”**
+- **Optional Muse Spark connection:** live model requests are disabled by default. The app only labels captions as AI-generated after a successful, valid response from Meta.
 
-Run the commands through their Replit workflows so Replit supplies the required service ports and preview paths.
+## Install and run
 
-The web app and API server need to be running together. The profit calculator and quotation builder work without an API key or database.
+This is a pnpm monorepo. Clone or import the **repository root** so the web app, API server, and shared API packages are all present.
 
-## Optional Muse Spark setup
+1. Use Node.js 24 and pnpm.
+2. Install workspace dependencies:
 
-Marketing generation runs in clearly labeled **demo mode** until the server has a valid Meta Model API key. To enable live generation:
+   ```sh
+   pnpm install
+   ```
 
-1. Create a key in the [Meta Model API dashboard](https://dev.meta.ai/) and confirm it has access to Muse Spark.
-2. In the Replit mobile app, open this project and its workspace. Open **Tools**, then **Setup → Secrets**. Tap **New Secret**, enter `MODEL_API_KEY` in **Key**, paste the Meta key into **Value**, and tap **Add Secret**. If the mobile app does not show the Tools pane, open the project in a mobile browser and switch to the desktop-site view; the same **Tools → Setup → Secrets** flow is documented for the Project Editor.
-3. Restart the **API Server** workflow, return to MoyaBiz AI, and submit a marketing request. The app labels a result as AI-generated only after the server receives and validates a successful response.
+3. In Replit, start the existing **API Server** and **MoyaBiz AI: web** workflows. Their commands are:
 
-Meta Model API usage may incur charges under the account's plan. Before each live generation request, the app asks the user to acknowledge possible usage charges. Live generation is optional; the other tools and demo captions work without it. If a configured model request fails, the app shows an error rather than presenting demo text as live AI output.
+   ```sh
+   pnpm --filter @workspace/api-server run dev
+   pnpm --filter @workspace/moyabiz-ai run dev
+   ```
 
-The API uses Muse Spark `muse-spark-1.3` through Meta's server-side [Responses API](https://developer.meta.ai/docs/protocols/responses), following Meta's documented `POST /v1/responses` request format and [model ID](https://developer.meta.ai/docs/models). The key is read only by the API server and is never sent to the browser. Live generation must be confirmed with a successful request after the key is configured.
+4. Open the MoyaBiz AI web preview. The Replit workflows provide the service ports and `/api` routing. The calculator and quotation builder do not require a database or external service.
 
-## Checks
+Outside Replit, configure equivalent port and `/api` reverse-proxy routing for the API server before running the Vite app.
+
+## Environment variables
+
+The hackathon/demo setup needs **no paid Meta API access**. Keep live generation disabled:
+
+- `META_MODEL_API_ENABLED` — non-secret server environment setting. Live requests are enabled only when this is explicitly set to `true`. Leave it unset or set it to `false` for demo mode.
+- `MODEL_API_KEY` — optional Meta key, read only by the API server from its environment. Store it in Replit Secrets or your hosting provider’s secret manager; never put a real value in source code, `.env.example`, frontend variables, or Git.
+
+Even if `MODEL_API_KEY` exists, the app does not call Meta unless `META_MODEL_API_ENABLED=true`. Enabling live mode can incur charges, requires Meta account access, and also requires the in-app usage acknowledgement. If Meta fails or returns an invalid response, the app shows an error; it does not relabel demo text as AI output.
+
+`.env.example` documents the optional setting without containing a key. Local `.env` files and common private-key files are excluded by `.gitignore`.
+
+## Tests and checks
 
 ```sh
 pnpm run typecheck
@@ -34,12 +52,29 @@ pnpm --filter @workspace/moyabiz-ai run typecheck
 pnpm --filter @workspace/moyabiz-ai run test:math
 ```
 
-The marketing test uses a mocked upstream response to verify the server-side request, demo fallback, validation, and error handling. It does **not** verify Meta credentials, account access, or a live model response; only a successful generation with your own key confirms live access.
+The marketing endpoint tests mock Meta so they do not make paid model requests. They verify demo mode, input validation, server-side request formatting, response parsing, and provider/network failures. The math tests cover calculator and quotation calculations.
+
+## Known limitations
+
+- Demo captions are template-based suggestions, not generated by an AI model.
+- The app does not save quotations or calculations to an account or database.
+- Live Muse Spark generation is off by default and is not required to use or demonstrate the calculator, quotation builder, or sample captions.
+- The optional Meta API is usage-billed and depends on the user’s Meta account permissions and billing setup.
+
+## Publish this project to public GitHub from Android
+
+Publish the **whole repository root**, not only `artifacts/moyabiz-ai`; the API server and shared packages are needed for the complete project.
+
+1. Open this Replit project’s **workspace/editor**, not the running app preview. On Android, use Replit’s mobile app or open the workspace in Chrome. If the Git panel is missing, use Chrome’s **⋮ → Desktop site**.
+2. In the workspace choose **Tools → Git**. Replit documents the Git pane as the place to initialize a repository or connect to GitHub.
+3. Connect your GitHub account, then create a new repository and choose **Public** visibility (or connect this workspace to the intended public repository).
+4. Review the files shown for commit. Do not stage `.env`, credential files, or any secret value. Replit Secrets are stored separately from project files; the checked-in `.gitignore` also excludes local environment and private-key files.
+5. Commit and push from the Git pane. Open the repository page on GitHub and confirm its visibility is **Public** and its README and project files are present.
+
+If this workspace was ever committed with a real credential in a file, remove it from Git history and rotate that credential before making the repository public; `.gitignore` only prevents future untracked files from being added.
 
 ## Project layout
 
-- `artifacts/moyabiz-ai/` — React + Vite application
-- `artifacts/api-server/` — Express API, including the server-side Meta Model API integration
-- `lib/api-spec/openapi.yaml` — API contract; regenerate clients with `pnpm --filter @workspace/api-spec run codegen`
-
-No database is required for the requested features.
+- `artifacts/moyabiz-ai/` — React + Vite mobile-friendly web application
+- `artifacts/api-server/` — Express API and optional server-side Meta integration
+- `lib/api-spec/openapi.yaml` — source API contract

@@ -3,3 +3,14 @@
 
 # No need to store the pnpm store twice.
 .local
+
+# Local secrets and private credentials
+.env
+.env.*
+.secrets/
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+service-account*.json
